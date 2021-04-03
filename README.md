@@ -1,5 +1,6 @@
-# terraform-kubernetes-in-cluster-config
-Terraform Kubernetes Provider in-cluster config test
+# Terraform Kubernetes Provider in-cluster config test
+
+This repo tests the kubernetes backend, both inside and outside of the cluster. It also tests the Kubernetes Provider's ability to provision resources from within a Pod.
 
 ## Setting up the test environment
 
@@ -142,7 +143,7 @@ kube delete secret tfstate-default-incluster
 kube delete secret tfstate-default-outside
 ```
 
-It can then be re-applied, as many times as needed. When done, delete both minikube profiles.
+It can then be re-applied as many times as needed. When done, delete both minikube profiles.
 
 ```
 minikube delete
