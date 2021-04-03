@@ -127,13 +127,13 @@ resource "kubernetes_role" "test" {
   rule {
     api_groups     = [""]
     resources      = ["secrets"]
-    verbs          = ["get", "list", "watch", "create"]
+    verbs          = ["get", "list", "watch", "create", "update"]
   }
 
   rule {
     api_groups     = ["coordination.k8s.io"]
     resources      = ["leases"]
-    verbs          = ["get", "list", "watch", "create", "delete"]
+    verbs          = ["get", "list", "watch", "create", "delete", "update"]
   }
 }
 
