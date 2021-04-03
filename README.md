@@ -31,7 +31,7 @@ $HOME/go/bin/terraform init
 $HOME/go/bin/terraform apply --auto-approve
 ```
 
-The test is not currently working. But you can view logs using these commands.
+You can view logs for each container using these commands.
 
 ```
 kubectl describe pod terraform-runner
@@ -40,13 +40,21 @@ kubectl logs terraform-runner -c terraform-init
 kubectl logs terraform-runner -c terraform-apply
 ```
 
-This is the error currently preventing the init inside the terraform-runner pod.
+## Results
+
+The terraform config in this repo is fully working, using terraform builds from commit 0d1bf8581b25b60957d174cc688b8533fc309d81 in the terraform repo.
+
+Previously, there was an error was preventing the init inside the terraform-runner pod. (The fix for this is in commit 01c09bb9c3d6648ee23b7c58fa3a54da7a9a3c4d). This error is no longer occurring, but the details are below because I was stuck on it for quite some time.
+
+Interestingly, the error containing the root cause only appeared during the first run of the `terraform-init` container. So I had to run `kubectl logs` in a loop before I was able to catch it.
 
 ```
-$ kubectl logs terraform-runner -c terraform-init
+$ while true; do kube logs terraform-runner -c terraform-init ; done
+Error from server (BadRequest): container "terraform-init" in pod "terraform-runner" is waiting to start: PodInitializing
+Error from server (BadRequest): container "terraform-init" in pod "terraform-runner" is waiting to start: PodInitializing
+Error from server (BadRequest): container "terraform-init" in pod "terraform-runner" is waiting to start: PodInitializing
 Error from server (BadRequest): container "terraform-init" in pod "terraform-runner" is waiting to start: PodInitializing
 
-$ kubectl logs terraform-runner -c terraform-init
 2021-04-03T00:29:11.021Z [DEBUG] Adding temp file log sink: /tmp/terraform-log419460704
 2021-04-03T00:29:11.021Z [INFO]  Terraform version: 0.15.0 dev
 2021-04-03T00:29:11.022Z [INFO]  Go runtime version: go1.16
@@ -96,32 +104,13 @@ Error loading state: secrets "tfstate-default-incluster" is forbidden: User "sys
                                 You may have to force-unlock this state in order to use it again.
                                 The Kubernetes backend acquires a lock during initialization to ensure
                                 the initial state file is created.
+```
 
+Any manual attempt to get logs would only show the state lock error:
+
+```
 $ kubectl logs terraform-runner -c terraform-init
-2021-04-03T00:29:11.903Z [DEBUG] Adding temp file log sink: /tmp/terraform-log692731982
-2021-04-03T00:29:11.903Z [INFO]  Terraform version: 0.15.0 dev
-2021-04-03T00:29:11.903Z [INFO]  Go runtime version: go1.16
-2021-04-03T00:29:11.903Z [INFO]  CLI args: []string{"/go/bin/terraform", "init"}
-2021-04-03T00:29:11.903Z [DEBUG] Attempting to open CLI config file: /root/.terraformrc
-2021-04-03T00:29:11.903Z [DEBUG] File doesn't exist, but doesn't need to. Ignoring.
-2021-04-03T00:29:11.903Z [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
-2021-04-03T00:29:11.903Z [DEBUG] ignoring non-existing provider search directory /root/.terraform.d/plugins
-2021-04-03T00:29:11.903Z [DEBUG] ignoring non-existing provider search directory /root/.local/share/terraform/plugins
-2021-04-03T00:29:11.903Z [DEBUG] ignoring non-existing provider search directory /usr/local/share/terraform/plugins
-2021-04-03T00:29:11.903Z [DEBUG] ignoring non-existing provider search directory /usr/share/terraform/plugins
-2021-04-03T00:29:11.904Z [INFO]  CLI command args: []string{"init"}
-2021-04-03T00:29:11.905Z [TRACE] Meta.Backend: built configuration for "kubernetes" backend with hash value 801054573
-
-Initializing the backend...
-2021-04-03T00:29:11.906Z [TRACE] Preserving existing state lineage "afff5210-c811-f699-3e43-9d1a1122dff8"
-2021-04-03T00:29:11.906Z [TRACE] Preserving existing state lineage "afff5210-c811-f699-3e43-9d1a1122dff8"
-2021-04-03T00:29:11.906Z [TRACE] Meta.Backend: working directory was previously initialized for "kubernetes" backend
-2021-04-03T00:29:11.906Z [TRACE] Meta.Backend: using already-initialized, unchanged "kubernetes" backend configuration
-2021-04-03T00:29:11.914Z [TRACE] Meta.Backend: instantiated backend of type *kubernetes.Backend
-2021-04-03T00:29:11.914Z [DEBUG] checking for provisioner in "."
-2021-04-03T00:29:11.914Z [DEBUG] checking for provisioner in "/go/bin"
-2021-04-03T00:29:11.914Z [INFO]  Failed to read plugin lock file .terraform/plugins/linux_amd64/lock.json: open .terraform/plugins/linux_amd64/lock.json: no such file or directory
-2021-04-03T00:29:11.914Z [TRACE] Meta.Backend: backend *kubernetes.Backend does not support operations, so wrapping it in a local backend
+...
 Error loading state: the state is already locked by another terraform client
 Lock Info:
   ID:        dfa35778-df3d-36b6-0931-4c18a6c53545
@@ -132,6 +121,8 @@ Lock Info:
   Created:   2021-04-03 00:29:11.05151995 +0000 UTC
   Info:
 ```
+
+## Cleanup and re-testing
 
 The test can be cleaned up by running the following:
 
